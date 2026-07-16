@@ -143,7 +143,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint src --ext ts",
     "test": "npm run test:unit",
-    "test:unit": "node --experimental-vm-modules node_modules/.bin/jest",
+    "test:unit": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
     "test:integration": "vscode-test",
     "pretest:integration": "npm run build"
   },
