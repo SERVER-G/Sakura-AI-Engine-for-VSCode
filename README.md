@@ -31,9 +31,19 @@
 
 | モデル ID | 名前 | Vision | ツール呼び出し |
 |---|---|---|---|
-| `preview/Kimi-K2.7` | Kimi K2.7 (Preview) | ✅ | ✅ |
-| `preview/Kimi-K2.6` | Kimi K2.6 (Preview) | ❌ | ✅ |
-| `preview/DeepSeek-R2` | DeepSeek R2 (Preview) | ❌ | ❌ |
+| `Qwen3-Coder-30B-A3B-Instruct` | Qwen3 Coder 30B A3B Instruct | ❌ | ✅ |
+| `Qwen3-Coder-480B-A35B-Instruct-FP8` | Qwen3 Coder 480B A35B Instruct (FP8) | ❌ | ✅ |
+| `cotomi` | cotomi | ❌ | ❌ |
+| `gpt-oss-120b` | gpt-oss 120b | ❌ | ✅ |
+| `llm-jp-3.1-8x13b-instruct4` | LLM-jp 3.1 8x13B Instruct4 | ❌ | ❌ |
+| `plamo-2.0-31b` | PLaMo 2.0 31B | ❌ | ❌ |
+| `preview/Kimi-K2.6` | Kimi K2.6 (Preview) | ✅ | ✅ |
+| `preview/Phi-4-mini-instruct-cpu` | Phi-4 Mini Instruct (CPU, Preview) | ❌ | ❌ |
+| `preview/Phi-4-multimodal-instruct` | Phi-4 Multimodal Instruct (Preview) | ✅ | ❌ |
+| `preview/Qwen3-0.6B-cpu` | Qwen3 0.6B (CPU, Preview) | ❌ | ❌ |
+| `preview/Qwen3-VL-30B-A3B-Instruct` | Qwen3 VL 30B A3B Instruct (Preview) | ✅ | ❌ |
+| `preview/Qwen3.6-35B-A3B` | Qwen3.6 35B A3B (Preview) | ✅ | ✅ |
+| `preview/gemma-4-31B-it` | Gemma 4 31B IT (Preview) | ✅ | ✅ |
 
 ## 設定
 
