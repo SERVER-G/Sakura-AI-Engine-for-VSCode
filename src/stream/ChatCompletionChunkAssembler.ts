@@ -80,7 +80,7 @@ export class ChatCompletionChunkAssembler {
       });
     } else {
       if (tc.id) existing.callId = tc.id;
-      if (tc.function?.name) existing.name += tc.function.name;
+      if (tc.function?.name) existing.name = tc.function.name;
       if (tc.function?.arguments) existing.argumentsBuffer += tc.function.arguments;
     }
   }
