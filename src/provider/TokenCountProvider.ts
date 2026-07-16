@@ -10,16 +10,35 @@ import * as vscode from "vscode";
  * 将来は正確なトークナイザーに切り替え可能
  */
 export class TokenCountProvider {
+  private readonly cache = new Map<string, number>();
+  private readonly maxCacheSize = 1000;
+
   /**
    * テキストまたはメッセージのトークン数を近似計算する
    * 日本語文字は 1.5 トークン相当として計算
    */
   count(text: string | vscode.LanguageModelChatRequestMessage): number {
     if (typeof text === "string") {
-      return this.countText(text);
+      const cached = this.cache.get(text);
+      if (cached !== undefined) {
+        return cached;
+      }
+      const result = this.countText(text);
+      this.setCache(text, result);
+      return result;
     }
 
     return this.countMessage(text);
+  }
+
+  private setCache(key: string, value: number): void {
+    if (this.cache.size >= this.maxCacheSize) {
+      const firstKey = this.cache.keys().next().value;
+      if (firstKey !== undefined) {
+        this.cache.delete(firstKey);
+      }
+    }
+    this.cache.set(key, value);
   }
 
   private countText(text: string): number {
@@ -45,15 +64,52 @@ export class TokenCountProvider {
       total += this.countText(content);
     } else if (Array.isArray(content)) {
       for (const part of content) {
-        if (part instanceof vscode.LanguageModelTextPart) {
-          total += this.countText(part.value);
-        } else if (part instanceof vscode.LanguageModelDataPart) {
-          // 画像は概算 765 トークン (low detail) ~ 85 + 170*tiles (high detail)
-          total += 765;
-        }
+        total += this.countPart(part);
       }
     }
 
     return total;
+  }
+
+  /**
+   * メッセージ内の 1 パートのトークン数を計算する
+   * テキスト・画像に加え、tool call / tool result も数える。
+   * エージェントモードではツール結果 (ファイル内容や検索結果) が
+   * コンテキストの大半を占めるため、これを数えないと使用量が極端に過小評価される。
+   */
+  private countPart(part: unknown): number {
+    if (part instanceof vscode.LanguageModelTextPart) {
+      return this.countText(part.value);
+    }
+
+    if (part instanceof vscode.LanguageModelDataPart) {
+      // 画像は概算 765 トークン (low detail) ~ 85 + 170*tiles (high detail)
+      return 765;
+    }
+
+    if (part instanceof vscode.LanguageModelToolCallPart) {
+      // tool 呼び出しはモデルに name + JSON 化した引数として送られる
+      let tokens = this.countText(part.name) + 8; // 呼び出し構造のオーバーヘッド
+      try {
+        tokens += this.countText(JSON.stringify(part.input ?? {}));
+      } catch {
+        // 循環参照などで stringify 失敗時は無視
+      }
+      return tokens;
+    }
+
+    if (part instanceof vscode.LanguageModelToolResultPart) {
+      // tool 結果 (ファイル内容・検索結果など) を再帰的に数える
+      let tokens = 4; // 結果構造のオーバーヘッド
+      const resultContent = (part as vscode.LanguageModelToolResultPart).content;
+      if (Array.isArray(resultContent)) {
+        for (const inner of resultContent) {
+          tokens += this.countPart(inner);
+        }
+      }
+      return tokens;
+    }
+
+    return 0;
   }
 }

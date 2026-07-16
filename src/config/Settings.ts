@@ -13,6 +13,7 @@ export interface SakuraExtensionSettings {
   maxConcurrentRequests: number;
   enableVision: boolean;
   enableToolCalling: boolean;
+  enableRag: boolean;
   debugLogging: boolean;
   allowInsecureHttpForLocalDev: boolean;
 }
@@ -26,6 +27,7 @@ const DEFAULTS: SakuraExtensionSettings = {
   maxConcurrentRequests: 4,
   enableVision: true,
   enableToolCalling: true,
+  enableRag: false,
   debugLogging: false,
   allowInsecureHttpForLocalDev: false,
 };
@@ -44,6 +46,7 @@ export function getSettings(): SakuraExtensionSettings {
     maxConcurrentRequests: cfg.get<number>("maxConcurrentRequests") ?? DEFAULTS.maxConcurrentRequests,
     enableVision: cfg.get<boolean>("enableVision") ?? DEFAULTS.enableVision,
     enableToolCalling: cfg.get<boolean>("enableToolCalling") ?? DEFAULTS.enableToolCalling,
+    enableRag: cfg.get<boolean>("enableRag") ?? DEFAULTS.enableRag,
     debugLogging: cfg.get<boolean>("debugLogging") ?? DEFAULTS.debugLogging,
     allowInsecureHttpForLocalDev:
       cfg.get<boolean>("allowInsecureHttpForLocalDev") ?? DEFAULTS.allowInsecureHttpForLocalDev,

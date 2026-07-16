@@ -1,7 +1,7 @@
 {
   "name": "sakura-ai-engine",
   "displayName": "Sakura AI Engine",
-  "description": "さくらのAI Engine を VS Code Copilot Chat のモデルプロバイダーとして統合する拡張機能",
+  "description": "さくらのAI Engine を VS Code Copilot Chat のモデルプロバイダーとして統合。モデル自動検出、トークン使用量追跡、ワークスペースRAG、Responses API対応",
   "version": "0.1.0",
   "publisher": "SERVER-G",
   "private": true,
@@ -22,7 +22,9 @@
     "language-model",
     "llm"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onLanguageModelChat:sakura-ai-engine"
+  ],
   "main": "./out/extension.js",
   "extensionKind": [
     "workspace",
@@ -85,11 +87,23 @@
           "description": "ツール呼び出し機能を有効にする",
           "order": 8
         },
+        "sakuraAiEngine.enableRag": {
+          "type": "boolean",
+          "default": false,
+          "description": "ワークスペースのコードを自動検索してチャットに追加する (RAG)。事前に「ワークスペースをインデックス化」が必要",
+          "order": 9
+        },
         "sakuraAiEngine.debugLogging": {
           "type": "boolean",
           "default": false,
           "description": "デバッグログを有効にする (本文・画像・ツール引数は秘匿されます)",
           "order": 9
+        },
+        "sakuraAiEngine.showTokenUsage": {
+          "type": "boolean",
+          "default": true,
+          "description": "ステータスバーにトークン使用量と推定コストを表示する",
+          "order": 10
         },
         "sakuraAiEngine.allowInsecureHttpForLocalDev": {
           "type": "boolean",
@@ -120,19 +134,26 @@
       {
         "command": "sakuraAiEngine.clearApiKey",
         "title": "Sakura AI Engine: API キーを削除"
+      },
+      {
+        "command": "sakuraAiEngine.indexWorkspace",
+        "title": "Sakura AI Engine: ワークスペースをインデックス化",
+        "when": "config.sakuraAiEngine.enableRag"
+      },
+      {
+        "command": "sakuraAiEngine.clearIndex",
+        "title": "Sakura AI Engine: インデックスをクリア",
+        "when": "config.sakuraAiEngine.enableRag"
+      },
+      {
+        "command": "sakuraAiEngine.showUsageDetails",
+        "title": "Sakura AI Engine: 使用量の詳細を表示"
       }
     ],
     "languageModelChatProviders": [
       {
-        "id": "sakura-ai-engine",
-        "name": "Sakura AI Engine",
-        "configuration": {
-          "apiKey": {
-            "type": "string",
-            "secret": true,
-            "description": "さくらのAI Engine API キー (UUID:シークレット 形式)"
-          }
-        }
+        "vendor": "sakura-ai-engine",
+        "displayName": "Sakura AI Engine"
       }
     ]
   },

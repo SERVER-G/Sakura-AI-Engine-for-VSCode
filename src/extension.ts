@@ -9,8 +9,9 @@ import { SecretStore } from "./config/SecretStore.js";
 import { Logger } from "./diagnostics/Logger.js";
 import { ConnectionTester } from "./diagnostics/ConnectionTester.js";
 import { getSettings } from "./config/Settings.js";
+import { UsagePanel } from "./usage/UsagePanel.js";
 
-const PROVIDER_ID = "sakura-ai-engine";
+const PROVIDER_VENDOR = "sakura-ai-engine";
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const logger = new Logger("Sakura AI Engine");
@@ -24,11 +25,32 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const provider = new SakuraLanguageModelProvider(configManager, logger);
   const connectionTester = new ConnectionTester(logger);
 
+  // トークン使用量追跡を初期化
+  provider.getUsageTracker().setGlobalState(context.globalState);
+
+  // 起動時にモデル一覧を API から取得
+  const apiKey = await secretStore.getApiKey();
+  if (apiKey) {
+    try {
+      const baseUrl = configManager.buildBaseUrl();
+      await provider.refreshModels(baseUrl, apiKey);
+      if (provider.didModelFetchFail()) {
+        logger.warn("モデル一覧の API 取得に失敗しました。組み込みリストを使用します。");
+      }
+    } catch {
+      logger.warn("モデル一覧の取得中にエラーが発生しました。組み込みリストを使用します。");
+    }
+  }
+
   // プロバイダーを登録する
   const providerDisposable = vscode.lm.registerLanguageModelChatProvider(
-    PROVIDER_ID,
+    PROVIDER_VENDOR,
     provider
   );
+
+  // ステータスバーを登録
+  const statusBar = provider.getUsageStatusBar();
+  context.subscriptions.push(statusBar);
 
   // コマンドを登録する
   const setApiKeyCommand = vscode.commands.registerCommand(
@@ -110,12 +132,87 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
   );
 
-  // 設定変更を監視してデバッグログの有効/無効を切り替える
-  const configWatcher = vscode.workspace.onDidChangeConfiguration((e) => {
-    if (e.affectsConfiguration("sakuraAiEngine")) {
-      const newSettings = getSettings();
-      logger.setDebugEnabled(newSettings.debugLogging);
-      logger.info("設定が更新されました");
+  const indexWorkspaceCommand = vscode.commands.registerCommand(
+    "sakuraAiEngine.indexWorkspace",
+    async () => {
+      const apiKey = await secretStore.getApiKey();
+      if (!apiKey) {
+        const action = await vscode.window.showWarningMessage(
+          "API キーが設定されていません",
+          "API キーを設定"
+        );
+        if (action === "API キーを設定") {
+          await vscode.commands.executeCommand("sakuraAiEngine.setApiKey");
+        }
+        return;
+      }
+
+      const currentSettings = getSettings();
+      const indexer = provider.getWorkspaceIndexer();
+
+      await vscode.window.withProgress(
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: "Sakura AI Engine: ワークスペースをインデックス化中...",
+          cancellable: true,
+        },
+        async (progress, token) => {
+          await indexer.indexWorkspace(
+            currentSettings.baseUrl,
+            apiKey,
+            progress,
+            token
+          );
+          vscode.window.showInformationMessage(
+            `Sakura AI Engine: ワークスペースのインデックス化が完了しました (${indexer.size()} チャンク)`
+          );
+        }
+      );
+    }
+  );
+
+  const clearIndexCommand = vscode.commands.registerCommand(
+    "sakuraAiEngine.clearIndex",
+    async () => {
+      provider.getWorkspaceIndexer().clear();
+      vscode.window.showInformationMessage(
+        "Sakura AI Engine: ワークスペースインデックスをクリアしました"
+      );
+    }
+  );
+
+  const showUsageDetailsCommand = vscode.commands.registerCommand(
+    "sakuraAiEngine.showUsageDetails",
+    () => {
+      UsagePanel.createOrShow(provider.getUsageTracker());
+    }
+  );
+
+  // 設定変更を監視してデバッグログの有効/無効を切り替え、
+  // baseUrl が変更された場合はモデル一覧を再取得する
+  const configWatcher = vscode.workspace.onDidChangeConfiguration(async (e) => {
+    if (!e.affectsConfiguration("sakuraAiEngine")) {
+      return;
+    }
+
+    const newSettings = getSettings();
+    logger.setDebugEnabled(newSettings.debugLogging);
+    logger.info("設定が更新されました");
+
+    if (e.affectsConfiguration("sakuraAiEngine.baseUrl")) {
+      const apiKey = await secretStore.getApiKey();
+      if (apiKey) {
+        try {
+          await provider.refreshModels(newSettings.baseUrl, apiKey);
+          if (provider.didModelFetchFail()) {
+            logger.warn("モデル一覧の API 再取得に失敗しました。組み込みリストを使用します。");
+          } else {
+            logger.info("モデル一覧を再取得しました");
+          }
+        } catch (err) {
+          logger.warn("モデル一覧の再取得中にエラーが発生しました", err);
+        }
+      }
     }
   });
 
@@ -124,6 +221,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     setApiKeyCommand,
     clearApiKeyCommand,
     testConnectionCommand,
+    indexWorkspaceCommand,
+    clearIndexCommand,
+    showUsageDetailsCommand,
     configWatcher,
     logger
   );

@@ -12,7 +12,8 @@ export interface SakuraModelDescriptor {
   maxOutputTokens: number;
   supportsVision: boolean;
   supportsToolCalling: boolean;
-  transport: "chat-completions";
+  supportsResponses: boolean;
+  transport: "chat-completions" | "responses";
   enabledByDefault: boolean;
 }
 
@@ -25,6 +26,41 @@ export interface SakuraChatCompletionRequest {
   temperature?: number;
   max_tokens?: number;
   stream: boolean;
+  stream_options?: { include_usage?: boolean };
+}
+
+// Responses API リクエスト
+export interface SakuraResponsesRequest {
+  model: string;
+  input: SakuraResponseInputItem[];
+  tools?: SakuraTool[];
+  tool_choice?: "none" | "auto" | "required" | SakuraToolChoice;
+  temperature?: number;
+  max_output_tokens?: number;
+  stream: boolean;
+  reasoning?: {
+    effort?: "low" | "medium" | "high";
+  };
+  web_search?: {
+    enabled?: boolean;
+  };
+}
+
+export type SakuraResponseInputItem =
+  | SakuraResponseMessage
+  | SakuraResponseFile;
+
+export interface SakuraResponseMessage {
+  type: "message";
+  role: "system" | "user" | "assistant" | "developer";
+  content: string | SakuraUserContentPart[];
+}
+
+export interface SakuraResponseFile {
+  type: "file";
+  file_id?: string;
+  filename?: string;
+  file_data?: string; // base64
 }
 
 export type SakuraChatMessage =
@@ -92,6 +128,28 @@ export interface SakuraChatCompletionChunk {
   usage?: SakuraUsage | null;
 }
 
+// Responses API レスポンス (ストリームチャンク)
+export interface SakuraResponsesChunk {
+  id: string;
+  object: "response.output_item.delta" | "response.completed";
+  type?: "message" | "reasoning" | "web_search_call";
+  delta?: {
+    content?: string;
+    reasoning?: string;
+  };
+  output?: SakuraResponseOutputItem[];
+  usage?: SakuraUsage;
+}
+
+export interface SakuraResponseOutputItem {
+  type: "message" | "reasoning" | "web_search_call";
+  id?: string;
+  role?: "assistant";
+  content?: string;
+  reasoning?: string;
+  status?: "in_progress" | "completed" | "failed";
+}
+
 export interface SakuraChatCompletionChunkChoice {
   index: number;
   delta: SakuraChatCompletionDelta;
@@ -138,4 +196,27 @@ export interface ProviderRequestContext {
   timeoutMs: number;
   enableVision: boolean;
   enableToolCalling: boolean;
+}
+
+// /v1/models レスポンス (OpenAI 互換)
+export interface SakuraModelsResponse {
+  object: "list";
+  data: SakuraModelItem[];
+}
+
+export interface SakuraModelItem {
+  id: string;
+  object: "model";
+  created: number;
+  owned_by: string;
+}
+
+// 料金情報
+export interface SakuraModelPricing {
+  inputPricePer1kTokens: number;   // 円
+  outputPricePer1kTokens: number;  // 円
+}
+
+export interface SakuraModelDescriptorWithPricing extends SakuraModelDescriptor {
+  pricing?: SakuraModelPricing;
 }

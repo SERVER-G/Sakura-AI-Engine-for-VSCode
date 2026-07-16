@@ -91,6 +91,62 @@ describe("ChatCompletionChunkAssembler", () => {
     expect(result.finishReason).toBe("stop");
   });
 
+  test("finish_reason が stop でも蓄積した tool call を確定する", () => {
+    const assembler = new ChatCompletionChunkAssembler();
+
+    assembler.processChunk(makeChunk({
+      tool_calls: [{
+        index: 0,
+        id: "call-abc",
+        type: "function",
+        function: { name: "read_file", arguments: '{"path":"a.ts"}' },
+      }],
+    }));
+
+    // 一部の API は tool call があっても stop で終了する
+    const result = assembler.processChunk(makeChunk({}, "stop"));
+
+    expect(result.toolCallDeltas).toHaveLength(1);
+    expect(result.toolCallDeltas[0].callId).toBe("call-abc");
+    expect(result.toolCallDeltas[0].name).toBe("read_file");
+  });
+
+  test("tool call の id が無い場合フォールバック ID を生成する", () => {
+    const assembler = new ChatCompletionChunkAssembler();
+
+    assembler.processChunk(makeChunk({
+      tool_calls: [{ index: 0, type: "function", function: { name: "list_dir", arguments: "{}" } }],
+    }));
+
+    const result = assembler.processChunk(makeChunk({}, "tool_calls"));
+
+    expect(result.toolCallDeltas).toHaveLength(1);
+    expect(result.toolCallDeltas[0].callId).toBe("call_0");
+    expect(result.toolCallDeltas[0].name).toBe("list_dir");
+  });
+
+  test("flush でストリーム終端時に残った tool call を確定する", () => {
+    const assembler = new ChatCompletionChunkAssembler();
+
+    // finish_reason が来ないまま stream が閉じるケース
+    assembler.processChunk(makeChunk({
+      tool_calls: [{
+        index: 0,
+        id: "call-xyz",
+        type: "function",
+        function: { name: "grep_search", arguments: '{"q":"x"}' },
+      }],
+    }));
+
+    const remaining = assembler.flush();
+    expect(remaining).toHaveLength(1);
+    expect(remaining[0].callId).toBe("call-xyz");
+    expect(remaining[0].name).toBe("grep_search");
+
+    // flush 後はバッファが空
+    expect(assembler.flush()).toHaveLength(0);
+  });
+
   test("choices が空のチャンクを処理する", () => {
     const assembler = new ChatCompletionChunkAssembler();
     const emptyChunk: SakuraChatCompletionChunk = {

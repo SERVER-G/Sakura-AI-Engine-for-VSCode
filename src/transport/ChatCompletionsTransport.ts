@@ -4,7 +4,7 @@
  */
 import * as vscode from "vscode";
 import { HttpClient } from "./HttpClient.js";
-import { ProviderRequestContext } from "../types/sakura.js";
+import { ProviderRequestContext, SakuraUsage } from "../types/sakura.js";
 import { NormalizedMessage } from "../types/normalized.js";
 import { normalizedToOpenAI } from "../mapping/NormalizedToOpenAI.js";
 import { mapTools, toolModeToChoice } from "../mapping/ToolMapper.js";
@@ -22,6 +22,7 @@ export interface TransportSendOptions {
   apiKey: string;
   baseUrl: string;
   logger: Logger;
+  onUsage?: (usage: SakuraUsage) => void;
 }
 
 export class ChatCompletionsTransport {
@@ -41,6 +42,7 @@ export class ChatCompletionsTransport {
       apiKey,
       baseUrl,
       logger,
+      onUsage,
     } = options;
 
     const messages = normalizedToOpenAI(normalizedMessages);
@@ -58,6 +60,9 @@ export class ChatCompletionsTransport {
       model: context.model.id,
       messages,
       stream: true,
+      // ストリーミング時にトークン使用量を返すよう要求する
+      // これがないと OpenAI 互換 API は usage を返さず、使用量が 0 のままになる
+      stream_options: { include_usage: true },
       ...(sakuraTools ? { tools: sakuraTools } : {}),
       ...(toolChoice ? { tool_choice: toolChoice } : {}),
     };
@@ -82,6 +87,6 @@ export class ChatCompletionsTransport {
       logger,
     });
 
-    await emitProgress(stream, progress, signal, logger);
+    await emitProgress(stream, progress, signal, logger, onUsage);
   }
 }

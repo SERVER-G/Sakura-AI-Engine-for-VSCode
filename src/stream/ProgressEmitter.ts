@@ -5,15 +5,17 @@
 import * as vscode from "vscode";
 import { ChatCompletionChunkAssembler } from "./ChatCompletionChunkAssembler.js";
 import { readSseStream } from "./SseReader.js";
-import { SakuraChatCompletionChunk } from "../types/sakura.js";
+import { SakuraChatCompletionChunk, SakuraUsage } from "../types/sakura.js";
 import { safeJsonParse } from "../util/Json.js";
 import { Logger } from "../diagnostics/Logger.js";
+import { reportUsageToVscode } from "./UsageReporter.js";
 
 export async function emitProgress(
   stream: ReadableStream<Uint8Array>,
   progress: vscode.Progress<vscode.LanguageModelResponsePart>,
   signal: AbortSignal,
-  logger: Logger
+  logger: Logger,
+  onUsage?: (usage: SakuraUsage) => void
 ): Promise<void> {
   const assembler = new ChatCompletionChunkAssembler();
 
@@ -21,7 +23,21 @@ export async function emitProgress(
     if (signal.aborted) break;
 
     const chunk = safeJsonParse<SakuraChatCompletionChunk>(event.data);
-    if (!chunk || !chunk.choices || chunk.choices.length === 0) {
+    if (!chunk) {
+      continue;
+    }
+
+    // usage フィールドがあればコールバックで通知
+    if (chunk.usage && onUsage) {
+      onUsage(chunk.usage);
+    }
+
+    // usage を VS Code に報告してコンテキストウィンドウ表示を更新する
+    if (chunk.usage) {
+      reportUsageToVscode(progress, chunk.usage);
+    }
+
+    if (!chunk.choices || chunk.choices.length === 0) {
       continue;
     }
 
@@ -45,5 +61,16 @@ export async function emitProgress(
     if (assembled.finishReason) {
       logger.debug(`Stream finished: ${assembled.finishReason}`);
     }
+  }
+
+  // ストリームが finish_reason を伴わずに終端した場合、
+  // バッファに残っている tool call を確定して報告する
+  const remaining = assembler.flush();
+  for (const tc of remaining) {
+    const input = ChatCompletionChunkAssembler.parseToolArguments(tc.arguments);
+    logger.debug(`Tool call (flush): ${tc.name} (${tc.callId})`);
+    progress.report(
+      new vscode.LanguageModelToolCallPart(tc.callId, tc.name, input)
+    );
   }
 }

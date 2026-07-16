@@ -54,19 +54,32 @@ export class ChatCompletionChunkAssembler {
       }
     }
 
-    // finish_reason が tool_calls の場合、全バッファを確定する
-    if (finishReason === "tool_calls") {
-      for (const buffer of this.toolCallBuffers.values()) {
-        toolCallDeltas.push({
-          callId: buffer.callId,
-          name: buffer.name,
-          arguments: buffer.argumentsBuffer,
-        });
+    // finish_reason が来たら蓄積した tool call を確定する
+    // 一部の API は tool call があっても finish_reason を "stop" で返すため、
+    // "tool_calls" に限定せず、バッファに tool call があれば必ず flush する
+    if (finishReason !== null && this.toolCallBuffers.size > 0) {
+      for (const [index, buffer] of this.toolCallBuffers) {
+        if (buffer.name) {
+          toolCallDeltas.push(this.finalizeBuffer(index, buffer));
+        }
       }
       this.toolCallBuffers.clear();
     }
 
     return { textDelta, toolCallDeltas, finishReason };
+  }
+
+  /**
+   * バッファを確定済み tool call に変換する
+   * callId が空の場合は index ベースのフォールバック ID を生成する
+   * (空 ID だと VS Code 側で tool 結果の紐付けに失敗しループの原因になる)
+   */
+  private finalizeBuffer(index: number, buffer: ToolCallBuffer): AssembledToolCall {
+    return {
+      callId: buffer.callId || `call_${index}`,
+      name: buffer.name,
+      arguments: buffer.argumentsBuffer,
+    };
   }
 
   private updateToolCallBuffer(tc: SakuraToolCallDelta): void {
@@ -100,5 +113,20 @@ export class ChatCompletionChunkAssembler {
 
   reset(): void {
     this.toolCallBuffers.clear();
+  }
+
+  /**
+   * ストリーム終端時に残っている tool call バッファを確定して返す
+   * finish_reason が来ないまま stream が閉じるケースへの保険
+   */
+  flush(): AssembledToolCall[] {
+    const remaining: AssembledToolCall[] = [];
+    for (const [index, buffer] of this.toolCallBuffers) {
+      if (buffer.name) {
+        remaining.push(this.finalizeBuffer(index, buffer));
+      }
+    }
+    this.toolCallBuffers.clear();
+    return remaining;
   }
 }
