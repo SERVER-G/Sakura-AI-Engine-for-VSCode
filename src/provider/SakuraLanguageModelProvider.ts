@@ -183,11 +183,9 @@ export class SakuraLanguageModelProvider
       this.logger.info(`Chat request [${requestId}] completed`);
     } catch (err) {
       let errorMessage: string;
-      let errorCode: string | undefined;
       if (err instanceof SakuraError) {
         this.logger.error(`Chat request [${requestId}] failed: ${err.kind}`, err);
         errorMessage = err.message;
-        errorCode = err.kind;
       } else if (err instanceof Error) {
         this.logger.error(`Chat request [${requestId}] unexpected error`, err);
         errorMessage = err.message;
@@ -195,7 +193,7 @@ export class SakuraLanguageModelProvider
         this.logger.error(`Chat request [${requestId}] unknown error`, err);
         errorMessage = String(err);
       }
-      throw new vscode.LanguageModelError(errorMessage, errorCode);
+      throw new vscode.LanguageModelError(errorMessage);
     }
   }
 

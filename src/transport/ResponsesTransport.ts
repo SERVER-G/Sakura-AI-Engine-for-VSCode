@@ -11,7 +11,6 @@ import { Logger } from "../diagnostics/Logger.js";
 import {
   SakuraResponsesRequest,
   SakuraResponseInputItem,
-  SakuraResponseMessage,
   SakuraResponsesChunk,
   SakuraUsage,
 } from "../types/sakura.js";
@@ -98,11 +97,11 @@ export class ResponsesTransport {
         .map((p) => p.text)
         .join("\n");
 
-      return {
-        type: "message",
-        role: msg.role === "developer" ? "developer" : msg.role,
-        content: textParts,
-      };
+       return {
+         type: "message",
+         role: msg.role === "tool" ? "user" : msg.role === "developer" ? "developer" : msg.role,
+         content: textParts,
+       };
     });
   }
 
