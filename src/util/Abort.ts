@@ -5,21 +5,29 @@
 
 /**
  * 複数の AbortSignal を結合して 1 つの AbortSignal を返す
+ * 呼び出し元は戻り値の cleanup() を適切なタイミングで呼んでリスナーを解放すること
  */
-export function anySignal(signals: AbortSignal[]): AbortSignal {
+export function anySignal(signals: AbortSignal[]): { signal: AbortSignal; cleanup: () => void } {
   const controller = new AbortController();
+  const handlers: { signal: AbortSignal; handler: () => void }[] = [];
 
   for (const signal of signals) {
     if (signal.aborted) {
       controller.abort(signal.reason);
-      return controller.signal;
+      return { signal: controller.signal, cleanup: () => {} };
     }
-    signal.addEventListener("abort", () => controller.abort(signal.reason), {
-      once: true,
-    });
+    const handler = () => controller.abort(signal.reason);
+    signal.addEventListener("abort", handler, { once: true });
+    handlers.push({ signal, handler });
   }
 
-  return controller.signal;
+  const cleanup = () => {
+    for (const { signal, handler } of handlers) {
+      signal.removeEventListener("abort", handler);
+    }
+  };
+
+  return { signal: controller.signal, cleanup };
 }
 
 /**

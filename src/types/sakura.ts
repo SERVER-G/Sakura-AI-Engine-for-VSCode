@@ -25,6 +25,8 @@ export interface SakuraChatCompletionRequest {
   tool_choice?: "none" | "auto" | "required" | SakuraToolChoice;
   temperature?: number;
   max_tokens?: number;
+  frequency_penalty?: number;
+  presence_penalty?: number;
   stream: boolean;
   stream_options?: { include_usage?: boolean };
 }
@@ -37,6 +39,8 @@ export interface SakuraResponsesRequest {
   tool_choice?: "none" | "auto" | "required" | SakuraToolChoice;
   temperature?: number;
   max_output_tokens?: number;
+  frequency_penalty?: number;
+  presence_penalty?: number;
   stream: boolean;
   reasoning?: {
     effort?: "low" | "medium" | "high";
@@ -196,6 +200,9 @@ export interface ProviderRequestContext {
   timeoutMs: number;
   enableVision: boolean;
   enableToolCalling: boolean;
+  temperature: number;
+  frequencyPenalty: number;
+  presencePenalty: number;
 }
 
 // /v1/models レスポンス (OpenAI 互換)

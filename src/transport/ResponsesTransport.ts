@@ -55,6 +55,9 @@ export class ResponsesTransport {
       model: context.model.id,
       input,
       stream: true,
+      temperature: context.temperature,
+      frequency_penalty: context.frequencyPenalty,
+      presence_penalty: context.presencePenalty,
       ...(context.enableToolCalling ? {} : {}),
     };
 
@@ -67,7 +70,7 @@ export class ResponsesTransport {
       "X-Request-ID": context.requestId,
     };
 
-    const stream = await this.httpClient.sendStreamRequest({
+    const { stream, clearTimeout } = await this.httpClient.sendStreamRequest({
       method: "POST",
       url,
       headers,
@@ -78,7 +81,11 @@ export class ResponsesTransport {
       logger,
     });
 
-    await this.emitProgress(stream, progress, signal, logger, onUsage);
+    try {
+      await this.emitProgress(stream, progress, signal, logger, onUsage);
+    } finally {
+      clearTimeout();
+    }
   }
 
   /**

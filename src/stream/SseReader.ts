@@ -19,6 +19,12 @@ export async function* readSseStream(
   const decoder = new TextDecoder("utf-8");
   let buffer = "";
 
+  // AbortSignal が発火したら reader をキャンセルして待機中の read() を解放する
+  const abortHandler = () => {
+    reader.cancel("Aborted by signal").catch(() => {});
+  };
+  signal?.addEventListener("abort", abortHandler);
+
   try {
     while (true) {
       if (signal?.aborted) {
@@ -53,7 +59,14 @@ export async function* readSseStream(
       }
     }
   } finally {
-    reader.releaseLock();
+    signal?.removeEventListener("abort", abortHandler);
+    try {
+      await reader.cancel();
+    } catch {
+      // cancel() が失敗しても無視
+    } finally {
+      reader.releaseLock();
+    }
   }
 }
 

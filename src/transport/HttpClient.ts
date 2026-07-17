@@ -31,15 +31,17 @@ export class HttpClient {
 
   /**
    * ストリーミングリクエストを送信して ReadableStream を返す
+   * 戻り値の clearTimeout は、ストリーム消費完了後に必ず呼び出すこと
    */
-  async sendStreamRequest(options: HttpRequestOptions): Promise<ReadableStream<Uint8Array>> {
+  async sendStreamRequest(options: HttpRequestOptions): Promise<{ stream: ReadableStream<Uint8Array>; clearTimeout: () => void }> {
     const { signal: timeoutSig, clear: clearReqTimeout } = timeoutSignal(options.requestTimeoutMs);
-    const signal = anySignal([options.signal, timeoutSig]);
+    const { signal, cleanup: cleanupSignal } = anySignal([options.signal, timeoutSig]);
 
     let lastError: SakuraError | undefined;
 
     for (let attempt = 0; attempt <= this.maxRetries; attempt++) {
       if (signal.aborted) {
+        cleanupSignal();
         clearReqTimeout();
         throw new SakuraError("CancelledError", "操作がキャンセルされました。", { message: "aborted" }, false);
       }
@@ -50,6 +52,7 @@ export class HttpClient {
         if (!response.ok) {
           const err = await mapHttpError(response);
           if (!err.retryable || attempt >= this.maxRetries) {
+            cleanupSignal();
             clearReqTimeout();
             throw err;
           }
@@ -61,15 +64,17 @@ export class HttpClient {
         }
 
         if (!response.body) {
+          cleanupSignal();
           clearReqTimeout();
           throw new SakuraError("TransportError", "レスポンスボディが空です。", { message: "no body" }, false);
         }
 
-        // NOTE: timeoutSig は stream 消費中も有効なので clear しない
-        return response.body;
+        // ストリーム消費完了後に呼び出し元が clearTimeout する
+        return { stream: response.body, clearTimeout: clearReqTimeout };
       } catch (err) {
         if (err instanceof SakuraError) {
           if (!err.retryable || attempt >= this.maxRetries) {
+            cleanupSignal();
             clearReqTimeout();
             throw err;
           }
@@ -79,11 +84,13 @@ export class HttpClient {
           await sleep(delay, signal);
           continue;
         }
+        cleanupSignal();
         clearReqTimeout();
         throw mapTransportError(err);
       }
     }
 
+    cleanupSignal();
     clearReqTimeout();
     throw lastError ?? new SakuraError("UnknownError", "リクエストが失敗しました。", { message: "max retries exceeded" }, false);
   }

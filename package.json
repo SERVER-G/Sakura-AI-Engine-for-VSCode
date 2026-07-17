@@ -111,6 +111,30 @@
           "description": "ローカル開発用に HTTP (非 TLS) を許可する (本番環境では使用しないでください)",
           "order": 10
         },
+        "sakuraAiEngine.temperature": {
+          "type": "number",
+          "default": 0.7,
+          "minimum": 0,
+          "maximum": 2,
+          "description": "生成の多様性 (低いほど決定的、高いほど多様)",
+          "order": 11
+        },
+        "sakuraAiEngine.frequencyPenalty": {
+          "type": "number",
+          "default": 0.3,
+          "minimum": -2,
+          "maximum": 2,
+          "description": "同じトークンの繰り返しを抑制するペナルティ (高いほど繰り返しを抑制)",
+          "order": 12
+        },
+        "sakuraAiEngine.presencePenalty": {
+          "type": "number",
+          "default": 0.1,
+          "minimum": -2,
+          "maximum": 2,
+          "description": "新しいトークンの出現を促進するペナルティ",
+          "order": 13
+        },
         "sakuraAiEngine.models": {
           "type": "array",
           "default": [],

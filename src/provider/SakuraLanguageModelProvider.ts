@@ -140,6 +140,9 @@ export class SakuraLanguageModelProvider
       timeoutMs: settings.requestTimeoutMs,
       enableVision: settings.enableVision && descriptor.supportsVision,
       enableToolCalling: settings.enableToolCalling && descriptor.supportsToolCalling,
+      temperature: settings.temperature,
+      frequencyPenalty: settings.frequencyPenalty,
+      presencePenalty: settings.presencePenalty,
     };
 
     const signal = cancellationToSignal(token);

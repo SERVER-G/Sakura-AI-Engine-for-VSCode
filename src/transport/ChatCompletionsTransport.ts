@@ -63,6 +63,9 @@ export class ChatCompletionsTransport {
       // ストリーミング時にトークン使用量を返すよう要求する
       // これがないと OpenAI 互換 API は usage を返さず、使用量が 0 のままになる
       stream_options: { include_usage: true },
+      temperature: context.temperature,
+      frequency_penalty: context.frequencyPenalty,
+      presence_penalty: context.presencePenalty,
       ...(sakuraTools ? { tools: sakuraTools } : {}),
       ...(toolChoice ? { tool_choice: toolChoice } : {}),
     };
@@ -76,7 +79,7 @@ export class ChatCompletionsTransport {
       "X-Request-ID": context.requestId,
     };
 
-    const stream = await this.httpClient.sendStreamRequest({
+    const { stream, clearTimeout } = await this.httpClient.sendStreamRequest({
       method: "POST",
       url,
       headers,
@@ -87,6 +90,10 @@ export class ChatCompletionsTransport {
       logger,
     });
 
-    await emitProgress(stream, progress, signal, logger, onUsage);
+    try {
+      await emitProgress(stream, progress, signal, logger, onUsage);
+    } finally {
+      clearTimeout();
+    }
   }
 }

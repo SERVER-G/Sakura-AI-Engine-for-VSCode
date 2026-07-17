@@ -16,6 +16,9 @@ export interface SakuraExtensionSettings {
   enableRag: boolean;
   debugLogging: boolean;
   allowInsecureHttpForLocalDev: boolean;
+  temperature: number;
+  frequencyPenalty: number;
+  presencePenalty: number;
 }
 
 const DEFAULTS: SakuraExtensionSettings = {
@@ -30,6 +33,9 @@ const DEFAULTS: SakuraExtensionSettings = {
   enableRag: false,
   debugLogging: false,
   allowInsecureHttpForLocalDev: false,
+  temperature: 0.7,
+  frequencyPenalty: 0.3,
+  presencePenalty: 0.1,
 };
 
 export function getSettings(): SakuraExtensionSettings {
@@ -50,5 +56,8 @@ export function getSettings(): SakuraExtensionSettings {
     debugLogging: cfg.get<boolean>("debugLogging") ?? DEFAULTS.debugLogging,
     allowInsecureHttpForLocalDev:
       cfg.get<boolean>("allowInsecureHttpForLocalDev") ?? DEFAULTS.allowInsecureHttpForLocalDev,
+    temperature: cfg.get<number>("temperature") ?? DEFAULTS.temperature,
+    frequencyPenalty: cfg.get<number>("frequencyPenalty") ?? DEFAULTS.frequencyPenalty,
+    presencePenalty: cfg.get<number>("presencePenalty") ?? DEFAULTS.presencePenalty,
   };
 }

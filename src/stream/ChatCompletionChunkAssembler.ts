@@ -129,4 +129,11 @@ export class ChatCompletionChunkAssembler {
     this.toolCallBuffers.clear();
     return remaining;
   }
+
+  /**
+   * 現在バッファに蓄積中の tool call 数を返す
+   */
+  getPendingCount(): number {
+    return this.toolCallBuffers.size;
+  }
 }
