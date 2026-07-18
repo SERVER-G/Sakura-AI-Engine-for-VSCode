@@ -6,7 +6,7 @@ This file is translated by AI.
 
 This extension is an unofficial extension developed by the community. Please use this extension at your own risk.
 
-This extension integrates [Sakura AI Engine](https://www.sakura.ad.jp/ai-engine/) as a Copilot Chat model provider in VS Code. By simply configuring your API key, you can use Sakura AI Engine models within Copilot Chat.
+This extension integrates [Sakura AI Engine](https://ai.sakura.ad.jp/sakura-ai/ai-engine/) as a Copilot Chat model provider in VS Code. By simply configuring your API key, you can use Sakura AI Engine models within Copilot Chat.
 
 ## Features
 
