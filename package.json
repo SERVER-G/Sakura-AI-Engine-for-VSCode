@@ -1,35 +1,34 @@
 {
-  "name": "sakura-ai-engine",
-  "displayName": "Sakura AI Engine",
-  "description": "さくらのAI Engine を VS Code Copilot Chat のモデルプロバイダーとして統合。モデル自動検出、トークン使用量追跡、ワークスペースRAG、Responses API対応",
-  "version": "0.1.0",
-  "publisher": "SERVER-G",
-  "private": true,
-  "license": "MIT",
+  "name": "sakura-ai-engine-for-vscode",
+  "displayName": "Sakura AI Engine for VS Code",
+  "description": "Adds Sakura AI Engine models as custom endpoints for GitHub Copilot Chat in Visual Studio Code.",
+  "version": "0.1.1",
+  "publisher": "server-g",
   "engines": {
     "vscode": "^1.103.0"
   },
   "categories": [
-    "AI",
-    "Chat",
+    "Machine Learning",
     "Other"
   ],
   "keywords": [
     "sakura",
     "ai",
-    "chat",
     "copilot",
-    "language-model",
+    "custom endpoint",
     "llm"
   ],
-  "activationEvents": [
-    "onLanguageModelChat:sakura-ai-engine"
-  ],
-  "main": "./out/extension.js",
-  "extensionKind": [
-    "workspace",
-    "ui"
-  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/SERVER-G/Sakura-AI-Engine-for-VSCode.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SERVER-G/Sakura-AI-Engine-for-VSCode/issues"
+  },
+  "homepage": "https://github.com/SERVER-G/Sakura-AI-Engine-for-VSCode#readme",
+  "license": "MIT",
+  "main": "./dist/extension.js",
+  "activationEvents": [],
   "contributes": {
     "configuration": {
       "title": "Sakura AI Engine",
@@ -224,5 +223,8 @@
         }
       ]
     }
+  },
+  "overrides": {
+    "serialize-javascript": "^7.0.5"
   }
 }
